@@ -1,7 +1,8 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# программа get-hh-pairs.py
+# Программа извлечения родо-видовых отношений между
+# существительными из словарных определений
 import sys
 
 # блок констант
@@ -13,9 +14,8 @@ intro_beg = ["в".decode(UTF8), "во".decode(UTF8), "на".decode(UTF8),
 kind_of_words = ["род".decode(UTF8), "вид".decode(UTF8),
     "разновидность".decode(UTF8), "тип".decode(UTF8),
     "форма".decode(UTF8), "сорт".decode(UTF8)]
-kind_after_name_words = ["отряд".decode(UTF8), "ряд".decode(UTF8),
-    "семейство".decode(UTF8), "класс".decode(UTF8),
-    "подкласс".decode(UTF8)]
+kind_after_name_words = ["семейство".decode(UTF8), "подкласс".decode(UTF8),
+    "отряд".decode(UTF8), "ряд".decode(UTF8), "класс".decode(UTF8)]
 general_beg = ["то".decode(UTF8), "что".decode(UTF8), "кто".decode(UTF8)]
 false_nouns = ["-л".decode(UTF8), "др".decode(UTF8)]
 
@@ -65,8 +65,8 @@ def get_next_word_lower(line, pos):
         res = res + line[pos]
         pos = pos + 1
     pos = line.find("}", pos)
-    if pos != -1:
-        pos = pos + 1
+    if pos == -1:
+        pos = len(line)
     res = res.lower()
     return res, pos
 
@@ -123,7 +123,7 @@ def is_kind_of_word(lower_lemma):
 def is_kind_after_name_words(lower_lemma):
     return lower_lemma in kind_after_name_words
 
-# является ли определение очень "обшим", из к-ого нельзя извлечь род
+# является ли определение очень "общим", из к-ого нельзя извлечь род
 def is_general_def(hyponym):
     return hyponym.lemma in general_beg
 
@@ -134,8 +134,7 @@ def def_has_mark(definition, pos):
 
 # печатает родо-видовую пару
 def print_pair(hypernym, hyponym):
-    sys.stdout.write('\t{0} - {1}\n'.format(hypernym.encode(UTF8),
-            hyponym.to_string()))
+    print '\t{0} - {1}'.format(hypernym.encode(UTF8), hyponym.to_string())
 
 # печатает определение, возможно обрезанное
 def print_def(origin_line):
@@ -148,7 +147,7 @@ def print_def(origin_line):
 
 # печатает определение и сформированные пары
 def print_def_and_pairs(hypernym, hyponym, hyponym2, origin_line):
-    if (not hyponym.is_empty()) and hypernym:
+    if (not hyponym.is_empty()):
         print_def(origin_line)
         print_pair(hypernym, hyponym)
         if not hyponym2.is_empty():
@@ -252,7 +251,7 @@ if __name__ == "__main__":
                     if name and is_kind_after_name_words(lower_lemma):
                         continue
 
-                # пропускаем фрагменты, к-ые могут воспринимаеться как…
+                # пропускаем фрагменты, к-ые могут восприниматься как…
                 # … существительные в mystem
                 if len(lower_form) < 2 or is_false_noun(lower_form):
                     continue
@@ -261,20 +260,20 @@ if __name__ == "__main__":
                         lower_form, lower_lemma)
                 if noun:
                     if hyponym.is_empty():
-                        hyponym = TWord(form, lemma)
-                        if nomin_case:
-                            break # сущ. в им. падеже
+                        hyponym = TWord(form, lemma) # 1-ый кандидат
+                        if nomin_case: # кандидат в им. падеже
+                            break
                     elif nomin_case:
-                        hyponym2 = TWord(form, lemma) # второй кандидат
+                        hyponym2 = TWord(form, lemma) # 2-ой кандидат
                 # из подобного определения род не извлечь
                 if is_general_def(hyponym):
-                    hyponym = hyponym2 = TWord()
+                    hyponym = hyponym2 = TWord() # очищаем результат
                     break
                 # может выступать в роли сущ., но точно не является родом
                 if is_general_def(hyponym2):
                     hyponym2 = TWord()
                     continue
-                if (not hyponym.is_empty()) and (not hyponym2.is_empty()):
+                if not (hyponym.is_empty() or hyponym2.is_empty()):
                     break # найдены оба кандидата
             else:
                 fn = fn + 1
